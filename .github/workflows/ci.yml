@@ -1,0 +1,41 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust nightly with UEFI target
+        run: |
+          rustup toolchain install nightly --component rust-src
+          rustup target add x86_64-unknown-uefi --toolchain nightly
+          rustup default nightly
+
+      - name: Build
+        run: cargo build --target x86_64-unknown-uefi
+
+      - name: Install QEMU + OVMF
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 ovmf
+
+      - name: Prepare ESP and boot headless
+        run: |
+          mkdir -p esp/EFI/BOOT
+          cp target/x86_64-unknown-uefi/debug/ignis.efi esp/EFI/BOOT/BOOTX64.EFI
+
+          OVMF_CODE=$(find /usr/share -iname "OVMF_CODE*.fd" | head -1)
+          OVMF_VARS_SRC=$(find /usr/share -iname "OVMF_VARS*.fd" | head -1)
+          cp "$OVMF_VARS_SRC" ./OVMF_VARS.fd
+
+          echo "Using OVMF_CODE: $OVMF_CODE"
+
+          timeout 30 qemu-system-x86_64 \
+            -machine q35 -m 256M \
+            -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
+            -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
+            -drive format=raw,file=fat:rw:esp \
+            -nographic -serial mon:stdio \
+            | tee boot.log || true
+          grep -q "Ignis" boot.log

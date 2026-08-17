@@ -1,0 +1,5 @@
+/target
+/esp
+*.efi
+boot.log
+OVMF_VARS.fd
