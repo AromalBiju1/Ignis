@@ -13,11 +13,15 @@ cargo build --target $TARGET
 
 echo "[*] Preparing ESP layout ..."
 rm -rf $IMG_DIR
-
 mkdir -p $IMG_DIR/EFI/BOOT
+mkdir -p $IMG_DIR/EFI/test
+mkdir -p $IMG_DIR/EFI/cachyos
 
 cp $BUILD_DIR/ignis.efi $IMG_DIR/EFI/BOOT/BOOTX64.EFI
 cp ignis.conf $IMG_DIR/ignis.conf
+cp $BUILD_DIR/ignis.efi $IMG_DIR/EFI/test/dummy.efi
+cp ./grubx64.efi.bin $IMG_DIR/EFI/cachyos/grubx64.efi
+
 echo "[*] Booting in QEMU..."
 
 qemu-system-x86_64 \

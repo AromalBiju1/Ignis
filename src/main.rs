@@ -11,6 +11,7 @@ use uefi::prelude::*;
 use uefi::println;
 use uefi::proto::console::text::{Key, ScanCode};
 use uefi::{boot, system, Char16};
+use uefi::boot::LoadImageSource;
 
 #[entry]
 fn main() -> Status {
@@ -63,8 +64,35 @@ fn main() -> Status {
                 _ => {}
             },
             Some(Key::Printable(c)) if c == enter_key => {
-                println!("\nWould boot: {}", entries[selected].name);
-                println!("(chainloading not implemented yet — next step)");
+                println!("\nBooting: {}", entries[selected].name);
+
+                let image_data = match fs::read_file_bytes(&entries[selected].path) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        println!("Failed to read image: {e:?}");
+                        boot::stall(3_000_000);
+                        return Status::SUCCESS;
+                    }
+                };
+
+                let load_source = LoadImageSource::FromBuffer {
+                    buffer: &image_data,
+                    file_path: None,
+                };
+
+                let image_handle = match boot::load_image(boot::image_handle(), load_source) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        println!("LoadImage failed: {e:?}");
+                        boot::stall(3_000_000);
+                        return Status::SUCCESS;
+                    }
+                };
+
+                match boot::start_image(image_handle) {
+                    Ok(()) => println!("Started image returned normally."),
+                    Err(e) => println!("StartImage failed: {e:?}"),
+                }
                 boot::stall(3_000_000);
                 return Status::SUCCESS;
             }
