@@ -17,7 +17,7 @@ rm -rf $IMG_DIR
 mkdir -p $IMG_DIR/EFI/BOOT
 
 cp $BUILD_DIR/ignis.efi $IMG_DIR/EFI/BOOT/BOOTX64.EFI
-
+cp ignis.conf $IMG_DIR/ignis.conf
 echo "[*] Booting in QEMU..."
 
 qemu-system-x86_64 \
